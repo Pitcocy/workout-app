@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addWeeks, startOfWeek, parseISO } from 'date-fns';
-import { getDatabase, ref, get } from 'firebase/database';
+import { ref, get } from 'firebase/database';
+import { database } from '../firebase.js';
 
 const db = getDatabase();
 
