@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { format, addWeeks, startOfWeek, parseISO } from 'date-fns';
-import { ref, get } from 'firebase/database';
-import { database } from '../firebase.js';
+import { format, parseISO } from 'date-fns';
+import { db, loadData } from '../firebase.js';
 
-const db = getDatabase();
 
 const mainExercises = ['Squat', 'Deadlift', 'Overhead Press', 'Bench Press'];
 const additionalExercisesList = ['Push Up', 'Pull Up', 'Chin Up', 'Leg Raise', 'Dips', 'Leg Extension', 'Barbell Row'];
@@ -52,14 +50,14 @@ const WeeklyWorkoutOverview = () => {
   const [additionalExercises, setAdditionalExercises] = useState({});
 
   useEffect(() => {
-    const loadData = async () => {
-      const loadedCycleStartDate = await loadFromFirebase('cycleStartDate', format(new Date(), 'yyyy-MM-dd'));
+    const loadFirebaseData = async () => {
+      const loadedCycleStartDate = await loadData('cycleStartDate', format(new Date(), 'yyyy-MM-dd'));
       setCycleStartDate(loadedCycleStartDate);
 
-      const loadedTrainingMax = await loadFromFirebase('trainingMax', trainingMax);
+      const loadedTrainingMax = await loadData('trainingMax', trainingMax);
       setTrainingMax(loadedTrainingMax);
 
-      const loadedAdditionalExercises = await loadFromFirebase('additionalExercises', {});
+      const loadedAdditionalExercises = await loadData('additionalExercises', {});
       setAdditionalExercises(loadedAdditionalExercises);
 
       // Calculate current week based on cycle start date
@@ -69,7 +67,7 @@ const WeeklyWorkoutOverview = () => {
       setCurrentWeek((weeksPassed % 3) + 1);
     };
 
-    loadData();
+    loadFirebaseData();
   }, []);
 
   const calculateWeight = (exercise, percentage) => {
