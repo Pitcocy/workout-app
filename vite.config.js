@@ -12,8 +12,6 @@ export default defineConfig({
     'process.env': process.env
   },
   build: {
-    rollupOptions: {
-      external: ['firebase']
-    }
+    rollupOptions: {}
   }
 })

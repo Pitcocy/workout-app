@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, get } from 'firebase/database';
 
+console.log('Firebase module loaded');
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -12,22 +14,32 @@ const firebaseConfig = {
 };
 
 console.log('Firebase config:', firebaseConfig);
-const app = initializeApp(firebaseConfig);
-console.log('Firebase app initialized:', app);
-const db = getDatabase(app);
 
-export { db };
+try {
+  const app = initializeApp(firebaseConfig);
+  console.log('Firebase app initialized:', app);
+  const db = getDatabase(app);
+  console.log('Firebase database initialized:', db);
 
-export const saveData = (key, value) => {
-  return set(ref(db, key), value);
-};
+  export { db };
 
-export const loadData = async (key, defaultValue) => {
-  try {
-    const snapshot = await get(ref(db, key));
-    return snapshot.exists() ? snapshot.val() : defaultValue;
-  } catch (error) {
-    console.error('Error loading data from Firebase:', error);
-    return defaultValue;
-  }
-};
+  export const saveData = (key, value) => {
+    console.log(`Saving data: ${key}`, value);
+    return set(ref(db, key), value);
+  };
+
+  export const loadData = async (key, defaultValue) => {
+    try {
+      console.log(`Loading data: ${key}`);
+      const snapshot = await get(ref(db, key));
+      const result = snapshot.exists() ? snapshot.val() : defaultValue;
+      console.log(`Loaded data: ${key}`, result);
+      return result;
+    } catch (error) {
+      console.error('Error loading data from Firebase:', error);
+      return defaultValue;
+    }
+  };
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+}
