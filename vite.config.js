@@ -8,4 +8,7 @@ export default defineConfig({
     include: ['papaparse']
   },
   base: '/workout-app/',
+  define: {
+    'process.env': {}
+  }
 })
