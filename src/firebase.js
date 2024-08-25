@@ -11,7 +11,7 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-  databaseURL: "https://workout-app-6446a-default-rtdb.firebaseio.com"
+  databaseURL: "https://workout-app-6446a-default-rtdb.europe-west1.firebasedatabase.app/"
 };
 
 console.log('Firebase config:', JSON.stringify(firebaseConfig, null, 2));
