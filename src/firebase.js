@@ -13,23 +13,36 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-console.log('Firebase config:', firebaseConfig);
+console.log('Firebase config:', JSON.stringify(firebaseConfig, null, 2));
 
-// Firebase initialization should be done outside the try-catch to ensure the variables are scoped correctly
-const app = initializeApp(firebaseConfig);
-console.log('Firebase app initialized:', app);
-const db = getDatabase(app);
-console.log('Firebase database initialized:', db);
+let app;
+let db;
 
-// Exporting db and functions outside the try-catch block
+try {
+  app = initializeApp(firebaseConfig);
+  console.log('Firebase app initialized:', app);
+  db = getDatabase(app);
+  console.log('Firebase database initialized:', db);
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+}
+
 export { db };
 
 export const saveData = (key, value) => {
+  if (!db) {
+    console.error('Firebase database not initialized');
+    return Promise.reject('Firebase database not initialized');
+  }
   console.log(`Saving data: ${key}`, value);
   return set(ref(db, key), value);
 };
 
 export const loadData = async (key, defaultValue) => {
+  if (!db) {
+    console.error('Firebase database not initialized');
+    return defaultValue;
+  }
   try {
     console.log(`Loading data: ${key}`);
     const snapshot = await get(ref(db, key));
