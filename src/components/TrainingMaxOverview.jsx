@@ -1,48 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { getDatabase, ref, set, get } from 'firebase/database';
+
+const db = getDatabase();
 
 const mainExercises = ['Squat', 'Deadlift', 'Overhead Press', 'Bench Press'];
 const additionalExercisesList = ['Push Up', 'Pull Up', 'Chin Up', 'Leg Raise', 'Dips', 'Leg Extension', 'Barbell Row'];
 
-// Helper functions for local storage
-const saveToLocalStorage = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error('Error saving to localStorage:', error);
-  }
+const saveToFirebase = (key, value) => {
+  set(ref(db, key), value);
 };
 
-const loadFromLocalStorage = (key, defaultValue) => {
-  try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : defaultValue;
-  } catch (error) {
-    console.error('Error loading from localStorage:', error);
-    return defaultValue;
-  }
+const loadFromFirebase = async (key, defaultValue) => {
+  const snapshot = await get(ref(db, key));
+  return snapshot.exists() ? snapshot.val() : defaultValue;
 };
 
 const TrainingMaxOverview = () => {
-  const [trainingMax, setTrainingMax] = useState(() => 
-    loadFromLocalStorage('trainingMax', {
-      Squat: 0,
-      Deadlift: 0,
-      'Overhead Press': 0,
-      'Bench Press': 0
-    })
-  );
-  const [additionalExercises, setAdditionalExercises] = useState(() =>
-    loadFromLocalStorage('additionalExercises', {})
-  );
-  const [historicalData, setHistoricalData] = useState(() =>
-    loadFromLocalStorage('historicalData', [])
-  );
+  const [trainingMax, setTrainingMax] = useState({
+    Squat: 0,
+    Deadlift: 0,
+    'Overhead Press': 0,
+    'Bench Press': 0
+  });
+  const [additionalExercises, setAdditionalExercises] = useState({});
+  const [historicalData, setHistoricalData] = useState([]);
   const [selectedExercise, setSelectedExercise] = useState('Squat');
-  const [cycleStartDate, setCycleStartDate] = useState(() => 
-    loadFromLocalStorage('cycleStartDate', format(new Date(), 'yyyy-MM-dd'))
-  );
+  const [cycleStartDate, setCycleStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [newHistoricalEntry, setNewHistoricalEntry] = useState({
     date: '',
     Squat: '',
@@ -51,13 +36,31 @@ const TrainingMaxOverview = () => {
     'Bench Press': ''
   });
 
+  useEffect(() => {
+    const loadData = async () => {
+      const loadedTrainingMax = await loadFromFirebase('trainingMax', trainingMax);
+      setTrainingMax(loadedTrainingMax);
+
+      const loadedAdditionalExercises = await loadFromFirebase('additionalExercises', {});
+      setAdditionalExercises(loadedAdditionalExercises);
+
+      const loadedHistoricalData = await loadFromFirebase('historicalData', []);
+      setHistoricalData(loadedHistoricalData);
+
+      const loadedCycleStartDate = await loadFromFirebase('cycleStartDate', cycleStartDate);
+      setCycleStartDate(loadedCycleStartDate);
+    };
+
+    loadData();
+  }, []);
+
   const handleTrainingMaxChange = (exercise, value) => {
     const updatedTrainingMax = {
       ...trainingMax,
       [exercise]: parseFloat(value) || 0
     };
     setTrainingMax(updatedTrainingMax);
-    saveToLocalStorage('trainingMax', updatedTrainingMax);
+    saveToFirebase('trainingMax', updatedTrainingMax);
   };
 
   const handleAdditionalExerciseChange = (exercise, field, value) => {
@@ -69,7 +72,7 @@ const TrainingMaxOverview = () => {
       }
     };
     setAdditionalExercises(updatedAdditionalExercises);
-    saveToLocalStorage('additionalExercises', updatedAdditionalExercises);
+    saveToFirebase('additionalExercises', updatedAdditionalExercises);
   };
 
   const addHistoricalData = () => {
@@ -79,7 +82,7 @@ const TrainingMaxOverview = () => {
     };
     const updatedHistoricalData = [...historicalData, newEntry].sort((a, b) => new Date(a.date) - new Date(b.date));
     setHistoricalData(updatedHistoricalData);
-    saveToLocalStorage('historicalData', updatedHistoricalData);
+    saveToFirebase('historicalData', updatedHistoricalData);
   };
 
   const handleNewHistoricalEntryChange = (field, value) => {
@@ -100,7 +103,7 @@ const TrainingMaxOverview = () => {
       };
       const updatedHistoricalData = [...historicalData, newEntry].sort((a, b) => new Date(a.date) - new Date(b.date));
       setHistoricalData(updatedHistoricalData);
-      saveToLocalStorage('historicalData', updatedHistoricalData);
+      saveToFirebase('historicalData', updatedHistoricalData);
       setNewHistoricalEntry({
         date: '',
         Squat: '',
@@ -113,7 +116,7 @@ const TrainingMaxOverview = () => {
 
   const handleCycleStartDateChange = (value) => {
     setCycleStartDate(value);
-    saveToLocalStorage('cycleStartDate', value);
+    saveToFirebase('cycleStartDate', value);
   };
 
   const calculateMainLiftWeights = (exercise) => {

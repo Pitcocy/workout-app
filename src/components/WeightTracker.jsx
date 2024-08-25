@@ -7,7 +7,18 @@ import CSVUpload from './CSVUpload';
 import ErrorBoundary from './ErrorBoundary';
 import CurrentWeightCard from './CurrentWeightCard';
 import EditWeightModal from './EditWeightModal';
-import { saveWeightData, loadWeightData } from '../utils/storage';
+import { getDatabase, ref, set, get } from 'firebase/database';
+
+const db = getDatabase();
+
+const saveWeightData = (data) => {
+  set(ref(db, 'weightData'), data);
+};
+
+const loadWeightData = async () => {
+  const snapshot = await get(ref(db, 'weightData'));
+  return snapshot.exists() ? snapshot.val() : [];
+};
 
 const WeightTracker = () => {
   const [weightData, setWeightData] = useState([]);
@@ -21,13 +32,16 @@ const WeightTracker = () => {
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
 
   useEffect(() => {
-    const loadedData = loadWeightData();
-    if (loadedData.length > 0) {
-      setWeightData(loadedData);
-      setSelectedMonth(startOfMonth(parseISO(loadedData[loadedData.length - 1].date)));
-    }
-    const savedUnit = localStorage.getItem('weightUnit') || 'kg';
-    setUnit(savedUnit);
+    const fetchData = async () => {
+      const loadedData = await loadWeightData();
+      if (loadedData.length > 0) {
+        setWeightData(loadedData);
+        setSelectedMonth(startOfMonth(parseISO(loadedData[loadedData.length - 1].date)));
+      }
+      const unitSnapshot = await get(ref(db, 'weightUnit'));
+      setUnit(unitSnapshot.exists() ? unitSnapshot.val() : 'kg');
+    };
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -124,7 +138,7 @@ const WeightTracker = () => {
   const toggleUnit = () => {
     const newUnit = unit === 'kg' ? 'lbs' : 'kg';
     setUnit(newUnit);
-    localStorage.setItem('weightUnit', newUnit);
+    set(ref(db, 'weightUnit'), newUnit);
   };
 
   const convertWeight = (weight) => {
@@ -154,14 +168,14 @@ const WeightTracker = () => {
     ? convertWeight(weightData[weightData.length - 1].weight)
     : null;
 
-  return (
-    <ErrorBoundary>
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">Weight Tracker</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <CurrentWeightCard weight={currentWeight} unit={unit} />
-          <div>
+    return (
+      <ErrorBoundary>
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-4">Weight Tracker</h1>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <CurrentWeightCard weight={currentWeight} unit={unit} />
+            <div>
             <h2 className="text-xl font-semibold mb-2">Add New Weight</h2>
             <form onSubmit={addWeight} className="flex flex-col space-y-2">
               <DatePicker

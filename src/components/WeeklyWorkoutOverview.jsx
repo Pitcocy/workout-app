@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { format, addWeeks, startOfWeek, parseISO } from 'date-fns';
+import { getDatabase, ref, get } from 'firebase/database';
+
+const db = getDatabase();
 
 const mainExercises = ['Squat', 'Deadlift', 'Overhead Press', 'Bench Press'];
 const additionalExercisesList = ['Push Up', 'Pull Up', 'Chin Up', 'Leg Raise', 'Dips', 'Leg Extension', 'Barbell Row'];
@@ -31,40 +34,42 @@ const weekPercentages = {
   3: [75, 85, 95]
 };
 
-const loadFromLocalStorage = (key, defaultValue) => {
-  try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : defaultValue;
-  } catch (error) {
-    console.error('Error loading from localStorage:', error);
-    return defaultValue;
-  }
+const loadFromFirebase = async (key, defaultValue) => {
+  const snapshot = await get(ref(db, key));
+  return snapshot.exists() ? snapshot.val() : defaultValue;
 };
 
 const WeeklyWorkoutOverview = () => {
-  const [cycleStartDate, setCycleStartDate] = useState(() => 
-    loadFromLocalStorage('cycleStartDate', format(new Date(), 'yyyy-MM-dd'))
-  );
+  const [cycleStartDate, setCycleStartDate] = useState('');
   const [currentWeek, setCurrentWeek] = useState(1);
-  const [trainingMax, setTrainingMax] = useState(() => 
-    loadFromLocalStorage('trainingMax', {
-      Squat: 0,
-      Deadlift: 0,
-      'Overhead Press': 0,
-      'Bench Press': 0
-    })
-  );
-  const [additionalExercises, setAdditionalExercises] = useState(() =>
-    loadFromLocalStorage('additionalExercises', {})
-  );
+  const [trainingMax, setTrainingMax] = useState({
+    Squat: 0,
+    Deadlift: 0,
+    'Overhead Press': 0,
+    'Bench Press': 0
+  });
+  const [additionalExercises, setAdditionalExercises] = useState({});
 
   useEffect(() => {
-    // Calculate current week based on cycle start date
-    const start = parseISO(cycleStartDate);
-    const today = new Date();
-    const weeksPassed = Math.floor((today - start) / (7 * 24 * 60 * 60 * 1000));
-    setCurrentWeek((weeksPassed % 3) + 1);
-  }, [cycleStartDate]);
+    const loadData = async () => {
+      const loadedCycleStartDate = await loadFromFirebase('cycleStartDate', format(new Date(), 'yyyy-MM-dd'));
+      setCycleStartDate(loadedCycleStartDate);
+
+      const loadedTrainingMax = await loadFromFirebase('trainingMax', trainingMax);
+      setTrainingMax(loadedTrainingMax);
+
+      const loadedAdditionalExercises = await loadFromFirebase('additionalExercises', {});
+      setAdditionalExercises(loadedAdditionalExercises);
+
+      // Calculate current week based on cycle start date
+      const start = parseISO(loadedCycleStartDate);
+      const today = new Date();
+      const weeksPassed = Math.floor((today - start) / (7 * 24 * 60 * 60 * 1000));
+      setCurrentWeek((weeksPassed % 3) + 1);
+    };
+
+    loadData();
+  }, []);
 
   const calculateWeight = (exercise, percentage) => {
     const weight = trainingMax[exercise] * (percentage / 100);

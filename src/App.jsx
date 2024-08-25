@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import WeeklyWorkoutOverview from './components/WeeklyWorkoutOverview';
 import WeightTracker from './components/WeightTracker';
 import TrainingMaxOverview from './components/TrainingMaxOverview';
+import './firebase';
 
 function App() {
   return (
