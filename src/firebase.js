@@ -1,29 +1,31 @@
 import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
+import { getDatabase, ref, set, get } from 'firebase/database';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyAKr2eg2sDJKFMm2BbqvULodQrlOi8kNb4",
-    authDomain: "workout-app-6446a.firebaseapp.com",
-    projectId: "workout-app-6446a",
-    storageBucket: "workout-app-6446a.appspot.com",
-    messagingSenderId: "661413170013",
-    appId: "1:661413170013:web:4280a50dcb7ce7567e36b4",
-    measurementId: "G-7W6Q2BS09M"
-  };
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+};
 
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+const db = getDatabase(app);
+
+export { db };
 
 export const saveData = (key, value) => {
-    return set(ref(db, key), value);
-  };
-  
-  export const loadData = async (key, defaultValue) => {
-    try {
-      const snapshot = await get(ref(db, key));
-      return snapshot.exists() ? snapshot.val() : defaultValue;
-    } catch (error) {
-      console.error('Error loading data from Firebase:', error);
-      return defaultValue;
-    }
-  };
+  return set(ref(db, key), value);
+};
+
+export const loadData = async (key, defaultValue) => {
+  try {
+    const snapshot = await get(ref(db, key));
+    return snapshot.exists() ? snapshot.val() : defaultValue;
+  } catch (error) {
+    console.error('Error loading data from Firebase:', error);
+    return defaultValue;
+  }
+};

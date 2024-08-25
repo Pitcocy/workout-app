@@ -9,6 +9,11 @@ export default defineConfig({
   },
   base: '/workout-app/',
   define: {
-    'process.env': {}
+    'process.env': process.env
+  },
+  build: {
+    rollupOptions: {
+      external: ['firebase']
+    }
   }
 })
