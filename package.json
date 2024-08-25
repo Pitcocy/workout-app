@@ -2,6 +2,7 @@
   "name": "workout-tracker",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "homepage": "https://pitcocy.github.io/workout-app/",
   "dependencies": {
     "@tailwindcss/forms": "^0.5.7",
