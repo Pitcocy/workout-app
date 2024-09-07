@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get } from 'firebase/database';
+import { getDatabase } from 'firebase/database';
+import { getAuth } from 'firebase/auth';
 
 console.log('Firebase module loaded');
 
@@ -16,19 +17,11 @@ const firebaseConfig = {
 
 console.log('Firebase config:', JSON.stringify(firebaseConfig, null, 2));
 
-let app;
-let db;
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
 
-try {
-  app = initializeApp(firebaseConfig);
-  console.log('Firebase app initialized:', app);
-  db = getDatabase(app);
-  console.log('Firebase database initialized:', db);
-} catch (error) {
-  console.error('Error initializing Firebase:', error);
-}
-
-export { db };
+export { db, auth };
 
 export const saveData = (key, value) => {
   if (!db) {

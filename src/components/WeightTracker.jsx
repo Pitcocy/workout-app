@@ -7,18 +7,8 @@ import CSVUpload from './CSVUpload';
 import ErrorBoundary from './ErrorBoundary';
 import CurrentWeightCard from './CurrentWeightCard';
 import EditWeightModal from './EditWeightModal';
-import { getDatabase, ref, set, get } from 'firebase/database';
-
-const db = getDatabase();
-
-const saveWeightData = (data) => {
-  set(ref(db, 'weightData'), data);
-};
-
-const loadWeightData = async () => {
-  const snapshot = await get(ref(db, 'weightData'));
-  return snapshot.exists() ? snapshot.val() : [];
-};
+import { auth } from '../firebase';
+import { loadData, saveData, updateData } from '../services/databaseService';
 
 const WeightTracker = () => {
   const [weightData, setWeightData] = useState([]);
@@ -33,29 +23,34 @@ const WeightTracker = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const loadedData = await loadWeightData();
-      if (loadedData.length > 0) {
-        setWeightData(loadedData);
-        setSelectedMonth(startOfMonth(parseISO(loadedData[loadedData.length - 1].date)));
+      const loadedWeightData = await loadData('weightData', []);
+      setWeightData(loadedWeightData);
+      if (loadedWeightData.length > 0) {
+        setSelectedMonth(startOfMonth(parseISO(loadedWeightData[loadedWeightData.length - 1].date)));
       }
-      const unitSnapshot = await get(ref(db, 'weightUnit'));
-      setUnit(unitSnapshot.exists() ? unitSnapshot.val() : 'kg');
+      const loadedUnit = await loadData('weightUnit', 'kg');
+      setUnit(loadedUnit);
     };
     fetchData();
   }, []);
 
   useEffect(() => {
-    calculateWeeklyAverages();
-    saveWeightData(weightData);
+    const saveWeightData = async () => {
+      if (weightData.length > 0) {
+        await saveData('weightData', weightData);
+        calculateWeeklyAverages();
+      }
+    };
+    saveWeightData();
   }, [weightData]);
 
   const handleDataUploaded = async (data) => {
     console.log("Received data from CSV:", data);
     setWeightData(data);
-    saveWeightData(data);
+    saveData('weightData', data);
   };
 
-  const addWeight = (e) => {
+  const addWeight = async (e) => {
     e.preventDefault();
     setError('');
     const weight = parseFloat(newWeight);
@@ -74,15 +69,17 @@ const WeightTracker = () => {
     };
     const updatedData = [...weightData, newEntry].sort((a, b) => new Date(a.date) - new Date(b.date));
     setWeightData(updatedData);
+    await saveData('weightData', updatedData);
     setNewWeight('');
     setSelectedDate(new Date());
   };
 
-  const editWeight = (date, newWeight) => {
+  const editWeight = async (date, newWeight) => {
     const updatedData = weightData.map(entry => 
       entry.date === date ? { ...entry, weight: newWeight } : entry
     );
     setWeightData(updatedData);
+    await saveData('weightData', updatedData);
     setEditModalOpen(false);
     setEditingEntry(null);
   };
@@ -135,10 +132,10 @@ const WeightTracker = () => {
     document.body.removeChild(link);
   };
 
-  const toggleUnit = () => {
+  const toggleUnit = async () => {
     const newUnit = unit === 'kg' ? 'lbs' : 'kg';
     setUnit(newUnit);
-    set(ref(db, 'weightUnit'), newUnit);
+    await saveData('weightUnit', newUnit);
   };
 
   const convertWeight = (weight) => {
@@ -226,10 +223,17 @@ const WeightTracker = () => {
             <div>
               <h2 className="text-xl font-semibold mb-2">Weekly Average Trend</h2>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={weeklyAverages.map(entry => ({...entry, average: convertWeight(entry.average)}))}>
+                <LineChart data={weeklyAverages.map(entry => ({
+                  ...entry,
+                  average: convertWeight(entry.average),
+                  difference: entry.difference ? convertWeight(entry.difference) : null
+                }))}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="weekStart" tickFormatter={formatXAxis} />
-                  <YAxis domain={['dataMin - 1', 'dataMax + 1']} />
+                  <YAxis 
+                    domain={['dataMin - 1', 'dataMax + 1']} 
+                    tickFormatter={(value) => value.toFixed(1)}
+                  />
                   <Tooltip content={<CustomTooltip unit={unit} />} />
                   <Legend />
                   <Line type="monotone" dataKey="average" stroke="#82ca9d" />

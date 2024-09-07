@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import AuthStatus from './AuthStatus';
 
 const Layout = ({ children }) => {
   return (
@@ -23,6 +24,7 @@ const Layout = ({ children }) => {
                 </Link>
               </div>
             </div>
+            <AuthStatus />
           </div>
         </div>
       </nav>

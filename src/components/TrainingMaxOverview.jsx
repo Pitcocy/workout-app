@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
-import { getDatabase, ref, set, get } from 'firebase/database';
-
-const db = getDatabase();
+import { loadData, saveData, updateData } from '../services/databaseService';
 
 const mainExercises = ['Squat', 'Deadlift', 'Overhead Press', 'Bench Press'];
 const additionalExercisesList = ['Push Up', 'Pull Up', 'Chin Up', 'Leg Raise', 'Dips', 'Leg Extension', 'Barbell Row'];
-
-const saveToFirebase = (key, value) => {
-  set(ref(db, key), value);
-};
-
-const loadFromFirebase = async (key, defaultValue) => {
-  const snapshot = await get(ref(db, key));
-  return snapshot.exists() ? snapshot.val() : defaultValue;
-};
 
 const TrainingMaxOverview = () => {
   const [trainingMax, setTrainingMax] = useState({
@@ -37,33 +26,47 @@ const TrainingMaxOverview = () => {
   });
 
   useEffect(() => {
-    const loadData = async () => {
-      const loadedTrainingMax = await loadFromFirebase('trainingMax', trainingMax);
-      setTrainingMax(loadedTrainingMax);
+    const loadDataFromFirebase = async () => {
+      console.log('Starting to load data...');
+      try {
+        const loadedTrainingMax = await loadData('trainingMax', {
+          Squat: 0,
+          Deadlift: 0,
+          'Overhead Press': 0,
+          'Bench Press': 0
+        });
+        console.log('Loaded Training Max:', loadedTrainingMax);
+        setTrainingMax(loadedTrainingMax);
 
-      const loadedAdditionalExercises = await loadFromFirebase('additionalExercises', {});
-      setAdditionalExercises(loadedAdditionalExercises);
+        const loadedAdditionalExercises = await loadData('additionalExercises', {});
+        console.log('Loaded Additional Exercises:', loadedAdditionalExercises);
+        setAdditionalExercises(loadedAdditionalExercises);
 
-      const loadedHistoricalData = await loadFromFirebase('historicalData', []);
-      setHistoricalData(loadedHistoricalData);
+        const loadedHistoricalData = await loadData('historicalData', []);
+        console.log('Loaded Historical Data:', loadedHistoricalData);
+        setHistoricalData(loadedHistoricalData);
 
-      const loadedCycleStartDate = await loadFromFirebase('cycleStartDate', cycleStartDate);
-      setCycleStartDate(loadedCycleStartDate);
+        const loadedCycleStartDate = await loadData('cycleStartDate', format(new Date(), 'yyyy-MM-dd'));
+        console.log('Loaded Cycle Start Date:', loadedCycleStartDate);
+        setCycleStartDate(loadedCycleStartDate);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
     };
 
-    loadData();
+    loadDataFromFirebase();
   }, []);
 
-  const handleTrainingMaxChange = (exercise, value) => {
+  const handleTrainingMaxChange = async (exercise, value) => {
     const updatedTrainingMax = {
       ...trainingMax,
       [exercise]: parseFloat(value) || 0
     };
     setTrainingMax(updatedTrainingMax);
-    saveToFirebase('trainingMax', updatedTrainingMax);
+    await saveData('trainingMax', updatedTrainingMax);
   };
 
-  const handleAdditionalExerciseChange = (exercise, field, value) => {
+  const handleAdditionalExerciseChange = async (exercise, field, value) => {
     const updatedAdditionalExercises = {
       ...additionalExercises,
       [exercise]: {
@@ -72,17 +75,17 @@ const TrainingMaxOverview = () => {
       }
     };
     setAdditionalExercises(updatedAdditionalExercises);
-    saveToFirebase('additionalExercises', updatedAdditionalExercises);
+    await saveData('additionalExercises', updatedAdditionalExercises);
   };
 
-  const addHistoricalData = () => {
+  const addHistoricalData = async () => {
     const newEntry = {
       date: format(new Date(), 'yyyy-MM-dd'),
       ...trainingMax
     };
     const updatedHistoricalData = [...historicalData, newEntry].sort((a, b) => new Date(a.date) - new Date(b.date));
     setHistoricalData(updatedHistoricalData);
-    saveToFirebase('historicalData', updatedHistoricalData);
+    await saveData('historicalData', updatedHistoricalData);
   };
 
   const handleNewHistoricalEntryChange = (field, value) => {
@@ -92,7 +95,7 @@ const TrainingMaxOverview = () => {
     }));
   };
 
-  const addNewHistoricalEntry = () => {
+  const addNewHistoricalEntry = async () => {
     if (newHistoricalEntry.date) {
       const newEntry = {
         ...newHistoricalEntry,
@@ -103,7 +106,7 @@ const TrainingMaxOverview = () => {
       };
       const updatedHistoricalData = [...historicalData, newEntry].sort((a, b) => new Date(a.date) - new Date(b.date));
       setHistoricalData(updatedHistoricalData);
-      saveToFirebase('historicalData', updatedHistoricalData);
+      await saveData('historicalData', updatedHistoricalData);
       setNewHistoricalEntry({
         date: '',
         Squat: '',
@@ -114,9 +117,9 @@ const TrainingMaxOverview = () => {
     }
   };
 
-  const handleCycleStartDateChange = (value) => {
+  const handleCycleStartDateChange = async (value) => {
     setCycleStartDate(value);
-    saveToFirebase('cycleStartDate', value);
+    await saveData('cycleStartDate', value);
   };
 
   const calculateMainLiftWeights = (exercise) => {
